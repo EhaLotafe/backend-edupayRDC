@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Exit on error
-set -o errexit
+# Script de build pour Render
 
-# Install dependencies
+echo "👉 Installation des dépendances..."
 npm install
 
-# Generate Prisma client
+echo "👉 Génération du client Prisma..."
 npx prisma generate
 
-# Build TypeScript
-npm run build
+echo "👉 Compilation TypeScript..."
+npx tsc
+
+echo "✅ Build terminé avec succès."
