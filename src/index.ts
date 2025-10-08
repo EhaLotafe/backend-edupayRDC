@@ -20,6 +20,7 @@ app.use("/api/fees", feesRoutes);
 app.get("/", (req, res) => {
   res.send("Bienvenue sur le backend EduPay !");
 });
+app.get("/api/test", (req, res) => res.json({ ok: true }));
 
 app.use(errorHandler);
 

@@ -4,7 +4,15 @@ import { verifyTokenMiddleware, AuthRequest } from "../middlewares/authMiddlewar
 
 const router = Router();
 const prisma = new PrismaClient();
-
+// Liste de tous les parents (pour admin)
+router.get("/", async (req, res) => {
+  try {
+    const parents = await prisma.parent.findMany();
+    res.json(parents);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors du chargement des parents" });
+  }
+});
 // Liste des enfants du parent
 router.get("/children", verifyTokenMiddleware, async (req: AuthRequest, res) => {
   try {
