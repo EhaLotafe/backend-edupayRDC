@@ -10,7 +10,7 @@ router.post("/", verifyTokenMiddleware, async (req: AuthRequest, res) => {
   if (user.role !== "parent") return res.status(403).json({ error: "Accès refusé" });
   const { feeId, amount, currency, paymentMethod, transactionId } = req.body;
   const payment = await prisma.payment.create({
-    data: { feeId, parentId: user.sub, amount: Number(amount), currency, paymentMethod, transactionId, status: "pending" }
+    data: { feeId, parentId: user.sub, amount: Number(amount), currency, paymentMethod, status: "pending" }
   });
   res.json(payment);
 });

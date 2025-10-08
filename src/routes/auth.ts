@@ -40,5 +40,44 @@ router.post("/login-parent", async (req, res) => {
   const token = signToken({ sub: parent.id, role: "parent" });
   res.json({ token, parent });
 });
+// Demander un OTP
+router.post("/request-otp", async (req, res) => {
+  const { phone, name } = req.body;
+  if (!phone) return res.status(400).json({ error: "Phone requis" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+
+  let parent = await prisma.parent.upsert({
+    where: { phone },
+    update: { otp, otpExpiry, name },
+    create: { phone, name, otp, otpExpiry },
+  });
+
+  console.log("OTP pour", phone, ":", otp); // remplacer par envoi SMS en prod
+  res.json({ message: "OTP généré et envoyé" });
+});
+
+// Vérifier l'OTP
+router.post("/verify-otp", async (req, res) => {
+  const { phone, otp } = req.body;
+  if (!phone || !otp) return res.status(400).json({ error: "Phone + OTP requis" });
+
+  const parent = await prisma.parent.findUnique({ where: { phone } });
+  if (!parent) return res.status(404).json({ error: "Parent introuvable" });
+
+  if (parent.otp !== otp) return res.status(400).json({ error: "OTP invalide" });
+  if (parent.otpExpiry && parent.otpExpiry < new Date())
+    return res.status(400).json({ error: "OTP expiré" });
+
+  const token = signToken({ sub: parent.id, role: "parent" });
+
+  await prisma.parent.update({
+    where: { phone },
+    data: { otp: null, otpExpiry: null, verified: true },
+  });
+
+  res.json({ token, parent });
+});
 
 export default router;

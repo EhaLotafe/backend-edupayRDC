@@ -1,0 +1,248 @@
+Parfait ! Je vais te faire un **résumé complet et détaillé de ton backend EduPay RDC**, en expliquant la structure des fichiers, les routes, les fonctionnalités, et la logique derrière chaque partie. Ce sera un guide clair pour toi et pour ton futur développement.
+
+---
+
+# **Résumé complet du backend EduPay RDC**
+
+## **1️⃣ Architecture générale**
+
+Ton backend est une **API REST en Node.js / TypeScript** utilisant :
+
+* **Express** : pour gérer les routes et les middlewares.
+* **Prisma ORM** : pour interagir avec la base de données SQLite (facile à déployer et portable).
+* **JWT (jsonwebtoken)** : pour gérer l’authentification et les sessions.
+* **bcryptjs** : pour sécuriser les mots de passe des écoles.
+* **Cors** : pour autoriser ton frontend à communiquer avec le backend.
+* **TypeScript** : pour un code typé et sécurisé.
+
+La structure des fichiers est la suivante :
+
+```
+backend/
+├─ src/
+│  ├─ config/
+│  │  └─ env.ts           # Variables d'environnement (PORT, JWT_SECRET, etc.)
+│  ├─ prisma/
+│  │  └─ client.ts        # Instance Prisma
+│  ├─ routes/
+│  │  ├─ auth.ts          # Routes d'authentification (parents, écoles)
+│  │  ├─ parents.ts       # Routes pour gérer les parents et leurs enfants
+│  │  ├─ children.ts      # Routes pour gérer les enfants
+│  │  ├─ schools.ts       # Routes pour gérer les écoles
+│  │  ├─ fees.ts          # Routes pour gérer les frais scolaires
+│  ├─ middlewares/
+│  │  ├─ authMiddleware.ts # Vérification JWT et rôle
+│  │  └─ errorHandler.ts   # Gestion globale des erreurs
+│  ├─ utils/
+│  │  └─ jwt.ts           # Fonctions pour signer et vérifier les JWT
+│  └─ index.ts            # Point d’entrée du backend
+├─ package.json
+└─ tsconfig.json
+```
+
+---
+
+## **2️⃣ Base de données (Prisma)**
+
+Tu as 5 modèles principaux :
+
+### **Parent**
+
+```prisma
+model Parent {
+  id        String    @id @default(cuid())
+  phone     String    @unique
+  name      String?
+  verified  Boolean   @default(false)
+  otp       String?   // OTP pour connexion
+  otpExpiry DateTime? // Expiration OTP
+  children  Child[]
+  payments  Payment[]
+  createdAt DateTime  @default(now())
+}
+```
+
+* Chaque parent peut avoir plusieurs enfants (`children`) et paiements (`payments`).
+* OTP pour authentification via téléphone.
+
+### **School**
+
+```prisma
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  students  Child[]
+  fees      Fee[]
+  createdAt DateTime @default(now())
+}
+```
+
+* Chaque école peut avoir plusieurs enfants et frais (`fees`).
+* Les écoles utilisent email + mot de passe pour s’authentifier.
+
+### **Child**
+
+```prisma
+model Child {
+  id         String @id @default(cuid())
+  name       String
+  classGrade String
+  schoolId   String
+  parentId   String
+  school     School @relation(fields: [schoolId], references: [id])
+  parent     Parent @relation(fields: [parentId], references: [id])
+  fees       Fee[]
+}
+```
+
+* Chaque enfant appartient à **un parent et une école**.
+
+### **Fee**
+
+```prisma
+model Fee {
+  id          String    @id @default(cuid())
+  feeType     String
+  amount      Float
+  currency    String
+  dueDate     DateTime
+  status      String    @default("pending")
+  description String?
+  childId     String
+  schoolId    String
+  child       Child     @relation(fields: [childId], references: [id])
+  school      School    @relation(fields: [schoolId], references: [id])
+  payments    Payment[]
+}
+```
+
+* Représente un **paiement à effectuer pour un enfant**.
+
+### **Payment**
+
+```prisma
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  currency      String
+  status        String
+  paymentMethod String?
+  parentId      String
+  feeId         String
+  parent        Parent   @relation(fields: [parentId], references: [id])
+  fee           Fee      @relation(fields: [feeId], references: [id])
+  createdAt     DateTime @default(now())
+}
+```
+
+* Chaque paiement est lié à un parent et un frais (`Fee`).
+
+---
+
+## **3️⃣ Authentification**
+
+### **Pour les écoles**
+
+* **Register** : `/api/auth/register-school`
+
+  * Crée une école avec email et mot de passe.
+  * Mot de passe hashé avec bcrypt.
+
+* **Login** : `/api/auth/login-school`
+
+  * Vérifie email + mot de passe.
+  * Retourne un JWT contenant `{ sub: schoolId, role: "school" }`.
+
+### **Pour les parents**
+
+* **Login via téléphone (OTP)** :
+
+  1. `/api/auth/request-otp` → Génère un OTP et le stocke dans la DB.
+  2. `/api/auth/verify-otp` → Vérifie l’OTP et retourne un JWT `{ sub: parentId, role: "parent" }`.
+
+---
+
+## **4️⃣ Routes principales**
+
+### **Parents (`/api/parents`)**
+
+* `GET /children` : retourne tous les enfants et leurs frais pour le parent connecté.
+
+### **Schools (`/api/schools`)**
+
+* `GET /me` : retourne les détails de l’école et ses élèves.
+* `GET /search?q=` : recherche d’écoles par nom ou email (mode insensible à la casse).
+
+### **Fees (`/api/fees`)**
+
+* Création, modification, consultation des frais (géré côté école).
+
+### **Payments (`/api/payments`)**
+
+* `POST /` → Parent crée un paiement (ex: après transfert).
+* `GET /me` → Liste des paiements d’un parent.
+* `PUT /:id/status` → École valide ou refuse un paiement.
+
+---
+
+## **5️⃣ Middlewares**
+
+### **authMiddleware.ts**
+
+* Vérifie le JWT envoyé dans `Authorization: Bearer <token>`.
+* Ajoute `req.user = { sub, role }` pour gérer les permissions.
+
+### **errorHandler.ts**
+
+* Middleware global pour gérer toutes les erreurs et renvoyer un JSON standard.
+
+---
+
+## **6️⃣ Utils**
+
+### **jwt.ts**
+
+* `signToken(payload)` → génère JWT avec `JWT_SECRET` et durée d’expiration.
+* `verifyToken(token)` → vérifie et décode le JWT.
+
+---
+
+## **7️⃣ Points importants**
+
+* Backend prêt pour **déploiement Render** : `https://backend-edupayrdc.onrender.com`.
+* Les routes sont toutes préfixées par `/api/...`.
+* OTP pour parents fonctionne **sans mot de passe**, sécurisé par JWT.
+* Toutes les entités sont liées via Prisma pour **relations solides**.
+* TypeScript assure que les erreurs types sont détectées dès la compilation.
+
+---
+
+## **8️⃣ Tests avec frontend (Expo)**
+
+* **URL du backend** : `https://backend-edupayrdc.onrender.com`
+* Exemple pour parent :
+
+```ts
+// Demander OTP
+fetch("https://backend-edupayrdc.onrender.com/api/auth/request-otp", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ phone: "243XXXXXXXXX", name: "Nom" }),
+});
+
+// Vérifier OTP
+fetch("https://backend-edupayrdc.onrender.com/api/auth/verify-otp", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ phone: "243XXXXXXXXX", otp: "123456" }),
+});
+```
+
+---
+
+Si tu veux, je peux te **faire un schéma visuel complet** du backend :
+**entités Prisma + routes + JWT + flux OTP**, pour que tu aies un guide visuel à suivre pour le frontend.
+
+

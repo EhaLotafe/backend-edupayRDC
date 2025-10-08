@@ -10,3 +10,4 @@ export function signToken(payload: string | object) {
 export function verifyToken(token: string) {
   return jwt.verify(token, JWT_SECRET) as any;
 }
+//backend/src/utils/jwt.ts

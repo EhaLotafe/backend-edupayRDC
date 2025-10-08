@@ -23,10 +23,13 @@ model Parent {
   phone     String    @unique
   name      String?
   verified  Boolean   @default(false)
+  otp       String?   // nouveau champ pour OTP
+  otpExpiry DateTime? // nouveau champ pour expiration OTP
   children  Child[]
   payments  Payment[]
   createdAt DateTime  @default(now())
 }
+
 
 model School {
   id        String   @id @default(cuid())
