@@ -69,7 +69,9 @@ model Payment {
   amount         Float
   currency       String
   status         String
-  paymentMethod  String?  // ✅ Ajouté : corrige l’erreur TS dans payments.ts
+  paymentMethod  String?
+  transactionId  String?     // ✅ ajouté
+  receiptData    String?     // ✅ ajouté
   parentId       String
   feeId          String
   parent         Parent   @relation(fields: [parentId], references: [id])
