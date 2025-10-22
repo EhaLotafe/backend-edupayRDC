@@ -4,80 +4,88 @@
 
 // Connexion à la base SQLite
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+provider = "sqlite"
+url      = env("DATABASE_URL")
 }
 
 // Générateur du client Prisma
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
+provider      = "prisma-client-js"
+binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 // ------------------------
 // Modèles de données
 // ------------------------
-
-model Parent {
-  id        String    @id @default(cuid())
-  phone     String    @unique
-  name      String?
-  verified  Boolean   @default(false)
-  otp       String?   // nouveau champ pour OTP
-  otpExpiry DateTime? // nouveau champ pour expiration OTP
-  children  Child[]
-  payments  Payment[]
-  createdAt DateTime  @default(now())
+model SuperUser {
+id        String   @id @default(cuid())
+email     String   @unique
+password  String
+role      String   @default("admin")
+createdAt DateTime @default(now())
 }
 
+model Parent {
+id        String    @id @default(cuid())
+phone     String    @unique
+name      String?
+verified  Boolean   @default(false)
+otp       String?   // nouveau champ pour OTP
+otpExpiry DateTime? // nouveau champ pour expiration OTP
+children  Child[]
+payments  Payment[]
+createdAt DateTime  @default(now())
+}
 
 model School {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  students  Child[]
-  fees      Fee[]
-  createdAt DateTime @default(now())
+id         String   @id @default(cuid())
+name       String
+email      String   @unique
+password   String
+// CORRECTION: Ajout du champ 'isApproved' pour correspondre à la logique de l'API admin.ts
+isApproved Boolean  @default(false)
+students   Child[]
+fees       Fee[]
+createdAt  DateTime @default(now())
 }
 
 model Child {
-  id         String @id @default(cuid())
-  name       String
-  classGrade String
-  schoolId   String
-  parentId   String
-  school     School @relation(fields: [schoolId], references: [id])
-  parent     Parent @relation(fields: [parentId], references: [id])
-  fees       Fee[]
+id           String @id @default(cuid())
+name         String
+classGrade   String
+schoolId     String
+parentId     String
+school       School @relation(fields: [schoolId], references: [id])
+parent       Parent @relation(fields: [parentId], references: [id])
+fees         Fee[]
 }
 
 model Fee {
-  id          String    @id @default(cuid())
-  feeType     String
-  amount      Float
-  currency    String
-  dueDate     DateTime
-  status      String    @default("pending")
-  description String?
-  childId     String
-  schoolId    String
-  child       Child     @relation(fields: [childId], references: [id])
-  school      School    @relation(fields: [schoolId], references: [id])
-  payments    Payment[]
+id           String    @id @default(cuid())
+feeType      String
+amount       Float
+currency     String
+dueDate      DateTime
+status       String    @default("pending")
+description  String?
+childId      String
+schoolId     String
+child        Child     @relation(fields: [childId], references: [id])
+school       School    @relation(fields: [schoolId], references: [id])
+payments     Payment[]
 }
 
 model Payment {
-  id             String   @id @default(cuid())
-  amount         Float
-  currency       String
-  status         String
-  paymentMethod  String?
-  transactionId  String?     // ✅ ajouté
-  receiptData    String?     // ✅ ajouté
-  parentId       String
-  feeId          String
-  parent         Parent   @relation(fields: [parentId], references: [id])
-  fee            Fee      @relation(fields: [feeId], references: [id])
-  createdAt      DateTime @default(now())
+id             String   @id @default(cuid())
+amount         Float
+currency       String
+status         String
+paymentMethod  String?
+transactionId  String?      // ✅ ajouté
+receiptData    String?      // ✅ ajouté
+parentId       String
+feeId          String
+parent         Parent   @relation(fields: [parentId], references: [id])
+fee            Fee      @relation(fields: [feeId], references: [id])
+createdAt      DateTime @default(now())
 }

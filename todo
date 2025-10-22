@@ -245,4 +245,5 @@ fetch("https://backend-edupayrdc.onrender.com/api/auth/verify-otp", {
 Si tu veux, je peux te **faire un schéma visuel complet** du backend :
 **entités Prisma + routes + JWT + flux OTP**, pour que tu aies un guide visuel à suivre pour le frontend.
 
+//npx eas build -p android --profile preview
 

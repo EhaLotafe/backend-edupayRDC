@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { PORT } from "./config/env";
+import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import parentsRoutes from "./routes/parents";
 import childrenRoutes from "./routes/children";
@@ -12,6 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/parents", parentsRoutes);
 app.use("/api/children", childrenRoutes);
